@@ -15,14 +15,19 @@ async function getImageBase64(imageUrl) {
 app.post('/api/gemini', async (req, res) => {
     try {
         const { prompt, imageUrl } = req.body;
-        if (!prompt || !imageUrl) throw new Error("Both prompt and imageUrl are required");
+        if (!prompt) throw new Error("Prompt is required");
 
-        const base64Image = await getImageBase64(imageUrl);
-        
-        const contents = [
-            { text: prompt },
-            { inlineData: { mimeType: "image/png", data: base64Image } }
-        ];
+        const contents = [{ text: prompt }];
+
+        if (imageUrl) {
+            const base64Image = await getImageBase64(imageUrl);
+            contents.push({ 
+                inlineData: { 
+                    mimeType: "image/png", 
+                    data: base64Image 
+                } 
+            });
+        }
 
         const response = await ai.models.generateContent({
             model: "gemini-2.0-flash-preview-image-generation",
