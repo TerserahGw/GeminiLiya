@@ -7,17 +7,15 @@ const PORT = process.env.PORT || 3000;
 
 const ai = new GoogleGenAI({ apiKey: "AIzaSyCaPISFNtOzYapi2o1QMl_vOjPNtAaYVhU" });
 
-app.use(express.json());
-
 async function getImageBase64(imageUrl) {
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     return Buffer.from(response.data, 'binary').toString('base64');
 }
 
-app.post('/api/gemini', async (req, res) => {
+app.get('/api/gemini', async (req, res) => {
     try {
-        const { prompt, imageUrl } = req.body;
-        if (!prompt) throw new Error("Prompt is required");
+        const { prompt, imageUrl } = req.query;
+        if (!prompt) throw new Error("Parameter prompt diperlukan");
 
         const contents = [{ text: prompt }];
 
@@ -44,12 +42,12 @@ app.post('/api/gemini', async (req, res) => {
             }
         }
 
-        throw new Error("Failed to get generated image from API.");
+        throw new Error("Gagal mendapatkan gambar dari API");
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Server berjalan di port ${PORT}`);
 });
