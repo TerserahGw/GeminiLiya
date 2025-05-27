@@ -3,9 +3,11 @@ const axios = require('axios');
 const { GoogleGenAI, Modality } = require("@google/genai");
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
 
 const ai = new GoogleGenAI({ apiKey: "AIzaSyCaPISFNtOzYapi2o1QMl_vOjPNtAaYVhU" });
+
+app.use(express.json());
 
 async function getImageBase64(imageUrl) {
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
@@ -48,7 +50,6 @@ app.post('/api/gemini', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
