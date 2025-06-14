@@ -1,16 +1,90 @@
 const express = require('express');
 const axios = require('axios');
-const { GoogleGenAI, Modality } = require("@google/genai");
+const { GoogleGenAI, Type, Modality } = require("@google/genai");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const ai = new GoogleGenAI({ apiKey: "AIzaSyCaPISFNtOzYapi2o1QMl_vOjPNtAaYVhU" });
 
-const getImageBase64 = async (imageUrl) => {
-  const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+const getMediaBase64 = async (url) => {
+  const response = await axios.get(url, { responseType: 'arraybuffer' });
   return Buffer.from(response.data, 'binary').toString('base64');
 };
+
+const SUPPORTED_AUDIO_TYPES = {
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mp3',
+  '.aiff': 'audio/aiff',
+  '.aac': 'audio/aac',
+  '.ogg': 'audio/ogg',
+  '.flac': 'audio/flac'
+};
+
+const getAudioMimeType = (url) => {
+  const extension = url.substring(url.lastIndexOf('.')).toLowerCase();
+  return SUPPORTED_AUDIO_TYPES[extension] || null;
+};
+
+app.get('/api/audio', async (req, res) => {
+  try {
+    const { audioUrl } = req.query;
+    if (!audioUrl) throw new Error("Audio URL parameter required");
+
+    const mimeType = getAudioMimeType(audioUrl);
+    if (!mimeType) throw new Error("Unsupported audio format");
+
+    const contents = [
+      { 
+        text: "Please analyze this audio and provide: complete transcript, summary, sentiment analysis, and speaker characteristics."
+      },
+      {
+        inlineData: {
+          mimeType,
+          data: await getMediaBase64(audioUrl)
+        }
+      }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: contents,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            transcript: { type: Type.STRING },
+            summary: { type: Type.STRING },
+            sentiment: { 
+              type: Type.OBJECT,
+              properties: {
+                overall: { type: Type.STRING },
+                confidence: { type: Type.NUMBER }
+              }
+            },
+            speaker: {
+              type: Type.OBJECT,
+              properties: {
+                pace: { type: Type.STRING },
+                clarity: { type: Type.STRING },
+                emotion: { type: Type.STRING }
+              }
+            },
+            keyTopics: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            }
+          }
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text));
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
 
 app.get('/api/gemini', async (req, res) => {
   try {
@@ -23,7 +97,7 @@ app.get('/api/gemini', async (req, res) => {
       contents.push({
         inlineData: {
           mimeType: "image/png",
-          data: await getImageBase64(imageUrl)
+          data: await getMediaBase64(imageUrl)
         }
       });
     }
@@ -55,7 +129,7 @@ app.get('/api/geminiV2', async (req, res) => {
       contents.push({
         inlineData: {
           mimeType: "image/png",
-          data: await getImageBase64(imageUrl)
+          data: await getMediaBase64(imageUrl)
         }
       });
     }
