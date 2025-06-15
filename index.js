@@ -182,4 +182,51 @@ app.get('/api/geminiV2', async (req, res) => {
   }
 });
 
+app.get('/api/geminiV3', async (req, res) => {
+  try {
+    const { prompt } = req.query;
+    if (!prompt) throw new Error("Prompt parameter required");
+
+    const chat = ai.chats.create({
+      model: "gemini-2.0-flash",
+      history: []
+    });
+
+    const response = await chat.sendMessage({
+      message: prompt
+    });
+
+    res.json({ response: response.text });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/api/geminiV3', async (req, res) => {
+  try {
+    const { prompt, history } = req.body;
+    if (!prompt) throw new Error("Prompt parameter required");
+
+    const chat = ai.chats.create({
+      model: "gemini-2.0-flash",
+      history: history || []
+    });
+
+    const response = await chat.sendMessage({
+      message: prompt
+    });
+
+    res.json({ 
+      response: response.text,
+      updatedHistory: [
+        ...(history || []),
+        { role: "user", parts: [{ text: prompt }] },
+        { role: "model", parts: [{ text: response.text }] }
+      ]
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
